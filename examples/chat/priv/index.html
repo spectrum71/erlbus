@@ -4,12 +4,13 @@
       <title>ErlBus Chat</title>
       <script src="/assets/jquery.js"></script>
       <script type="text/javascript">
-        var websocket;
+        var websocket, username;
         jQuery(document).ready(init);
 
         function init() {
           jQuery("#roomContainer").hide();  
           jQuery("#alertContainer").hide();
+          jQuery("#username_info").hide();
           jQuery("#connectButton").hide();
           if(!("WebSocket" in window)){  
             showAlert('<span style="color: red;">Your Web Browser doesn\'t support Websockets!</span>');
@@ -19,72 +20,165 @@
         };
 
         function connect() {
-        wsHost = "ws://" + window.location.host + "/websocket";
-        websocket = new WebSocket(wsHost);
-        websocket.onopen = function(evt) { onOpen(evt) }; 
-        websocket.onclose = function(evt) { onClose(evt) }; 
-        websocket.onmessage = function(evt) { onMessage(evt) }; 
-        websocket.onerror = function(evt) { onError(evt) }; 
-      }; 
+          wsHost = "ws://" + window.location.host + "/websocket";
+          websocket = new WebSocket(wsHost);
+          websocket.onopen = function(evt) { onOpen(evt) }; 
+          websocket.onclose = function(evt) { onClose(evt) }; 
+          websocket.onmessage = function(evt) { onMessage(evt) }; 
+          websocket.onerror = function(evt) { onError(evt) }; 
+        }; 
 
-      function onOpen(evt) { 
-        jQuery('#roomContainer').fadeIn('slow');
-      };  
+        function disconnect() {
+          websocket.close();
+          onClose('any');
+        }
 
-      function onClose(evt) { 
-        jQuery('#roomContainer').fadeOut('slow');
-        showAlert('<span style="color: red;">Websocket connection has been closed!</span>');
-      };  
+        function onOpen(evt) { 
+          username = jQuery("#username_form").val();
+          jQuery("#textToSend").val(username);
+          sendMessage();
+          jQuery('#loginContainer').fadeOut('slow');
+          clearAlert();
+          jQuery("#username_info").html('Chatting as ' + username);
+          jQuery('#username_info').fadeIn('slow');
+          jQuery('#roomContainer').fadeIn('slow');
+        };  
 
-      function onMessage(evt) { 
-        showMessage(jQuery.parseJSON(evt.data));
-      };  
+        function onClose(evt) { 
+          jQuery('#username_info').fadeOut('slow');
+          jQuery("#username_info").html('');
+          jQuery('#roomContainer').fadeOut('slow');
+          jQuery('#loginContainer').fadeIn('slow');
+          showAlert('<span style="color: red;">Websocket connection has been closed!</span>');
+        };  
 
-      function onError(evt) {
-        showAlert('<span style="color: red;">ERROR: ' + evt.data+ '</span>');
-      };
+        function onMessage(evt) { 
+          showMessage(jQuery.parseJSON(evt.data));
+        };  
 
-      function sendMessage() {
-        if(websocket.readyState == websocket.OPEN){
-          var txt = jQuery("#textToSend").val();
-          websocket.send(txt);
-          jQuery("#textToSend").val("");
-        } else {
-           showAlert('<span style="color: red;">ERROR: websocket is not ready</span>');
+        function onError(evt) {
+          showAlert('<span style="color: red;">ERROR: ' + evt.data+ '</span>');
         };
-      };
 
-      function showMessage(data) {
-        jQuery('#chatContainer').append('<div>' + data.sender + ' -> ' + data.msg + '</div>');
-      };
+        function sendMessage() {
+          if(websocket.readyState == websocket.OPEN){
+            var txt = jQuery("#textToSend").val();
+            websocket.send(txt);
+            jQuery("#textToSend").val("");
+          } else {
+            showAlert('<span style="color: red;">ERROR: websocket is not ready</span>');
+          };
+        };
 
-      function showAlert(txt) {
-        jQuery("#alertContainer").html(txt);
-        jQuery("#alertContainer").show();
-      }
+        function showMessage(data) {
+          jQuery('#chatContainer').append('<div>' + data.sender + ' : ' + data.msg + '</div>');
+        };
+
+        function showAlert(txt) {
+          jQuery("#alertContainer").html(txt);
+          jQuery("#alertContainer").show();
+        }
+
+        function clearAlert() {
+          jQuery("#alertContainer").html("");
+          jQuery("#alertContainer").hide();
+        }
       </script>
       <style>
         #chatContainer {
-          background-color:lightgray;
+          background-color:white;
           min-width: 300px;
           min-height: 200px;
+          padding: 10px 10px;
+          color: #21b2d5;
+          border: 2px solid #21b2d5;
+          margin: 4px 2px;
+          border-radius: 12px
+        }
+        body{
+            font-family: 'Raleway', sans-serif;
+            background-color: #ffffff;
+            color: #21b2d5;
+            font-size: 16px;
+        }
+        .text-container{
+        	background-color: white; /* Green */
+            border: 2px solid #21b2d5;
+            color: #21b2d5;
+            text-decoration: none;
+            padding: 10px 10px;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            -webkit-transition-duration: 0.4s;
+            transition-duration: 0.4s;
+            border-radius: 12px
+        }
+        .text-container:hover {
+            background-color: #21b2d5;
+            color: white;
+            border: 2px solid #21b2d5;
+        }
+        .button {
+            background-color: #21b2d5; /* Green */
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            padding: 10px 10px;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            -webkit-transition-duration: 0.4s;
+            transition-duration: 0.4s;
+            border-radius: 12px
+        }
+
+        .button:hover {
+            background-color: white;
+            color: #21b2d5;
+            border: 2px solid #21b2d5;
+        }
+
+        .btn-negative {
+          background-color: #82006a;
+          color: white;
+        }
+
+        .btn-negative:hover {
+          color: #82006a;
+            border: 2px solid #82006a;
         }
       </style>
   </head>
   <body>
     <div id="alertContainer"></div>
-    <input id="connectButton" type="button" value="Join the Chat Room!" onclick="connect();"/>
-
+    <div id="loginContainer">
+      <form onsubmit="connect(); return false;">
+        <span>Your Chatname</span>
+        <span>
+          <input id="username_form" class="text-container" type="text" />
+        </span><br>
+        <span>
+          <input id="connectButton" class="button" type="submit" value="Join the Chat Room!"/> 
+        </span>
+      </form>
+    </div>
+    <div id="username_info"></div>
     <div id="roomContainer">
       <div id="chatContainer"></div>
       <form onsubmit="sendMessage(); return false;">
+      	<span>Pesan</span>
         <span>
-          <input id="textToSend" type="text" />
+          <input id="textToSend" class="text-container" type="text" />
         </span>
         <span>
-          <input type="submit" value="send"/> 
+          <input class="button" type="submit" value="Kirim"/> 
         </span>
       </form>
+      <button class="button btn-negative" onclick="disconnect()">Disconnect</button>
     </div>
   </body>
 </html>
